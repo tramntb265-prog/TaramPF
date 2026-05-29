@@ -11,6 +11,10 @@
     "@types/node": "^25.9.1"
   },
   "scripts": {
-    "test:clientlist": "playwright test -g @client_list --project=chromium"
+    "test:clientlist": "playwright test -g @client_list --project=chromium",
+    "test:clientlist:pf": "playwright test -g @client_list --project=chromium-pf"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0"
   }
 }
