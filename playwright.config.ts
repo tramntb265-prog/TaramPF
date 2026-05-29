@@ -34,5 +34,12 @@ export default defineConfig({
     },
     testMatch: '**/PFTest/**/*.spec.ts',
   },
+  {
+    name: 'chromium',
+    use: { 
+      ...devices['Desktop Chrome'],
+    },
+    testMatch: ['**/client/**/*.spec.ts', '**/PFTest/**/*.spec.ts'],
+  },
   ],
 });
