@@ -11,6 +11,8 @@
     "@types/node": "^25.9.1"
   },
   "scripts": {
-    "test:clientlist": "playwright test -g @client_list --project=chromium"
+    "test:clientlist": "playwright test -g @client_list --project=chromium-pf",
+    "test:clientlist-headless": "playwright test tests/client/clientList.spec.ts --project=chromium-standard --headed",
+    "test:clientlist-2": "playwright test tests/client/clientList.spec.ts --project=chromium-standard"
   }
 }
