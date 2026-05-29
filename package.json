@@ -1,0 +1,16 @@
+{
+  "name": "TaramPF",
+  "version": "1.0.0",
+  "description": "new taram pf",
+  "main": "index.js",
+  "repository": "https://dev/flexigrow.app",
+  "author": "taram",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1"
+  },
+  "scripts": {
+    "test:clientlist": "playwright test -g @client_list --project=chromium"
+  }
+}
