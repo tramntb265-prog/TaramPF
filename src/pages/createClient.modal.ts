@@ -6,8 +6,8 @@ import { ClientListPage } from "./clientList.page";
 export class CreateClientModal {
     readonly page: Page;
     readonly modal: Locator;
-    readonly modalFooter: Locator;
-    readonly createClientButton: Locator;
+    readonly openModal: Locator;
+    readonly openAddClientButton: Locator;
     readonly modalHeading: Locator;
     readonly businessNameInput: Locator;
     readonly tradingNameInput: Locator;
@@ -19,6 +19,8 @@ export class CreateClientModal {
     readonly accountManagerCombobox: Locator;
     readonly accountManagerEmailInput: Locator;
     readonly addressSearchButton: Locator;
+    readonly addressSearchInput: Locator;
+    readonly successMessage: Locator;
     readonly assignBranchCombobox: Locator;
     readonly cancelButton: Locator;
     readonly saveButton: Locator;
@@ -26,10 +28,16 @@ export class CreateClientModal {
 
     constructor(page: Page) {
         this.page = page;
-        this.modal = page.getByRole('dialog', { name: /Add Client|Create New Client/i });
-        this.modalFooter = this.modal.locator('div.w-full.flex.gap-2.justify-end.mt-4');
-        this.createClientButton = page.getByRole('button', { name: 'Create Client' });
-        this.modalHeading = page.getByRole('heading', { name: /Add Client|Create New Client/i });
+        this.openModal = page
+            .locator('[role="dialog"][data-state="open"]')
+            .filter({ has: page.getByRole('heading', { name: /Add Client|Create New Client/i }) })
+            .first();
+        this.modal = page
+            .locator('[role="dialog"]')
+            .filter({ has: page.getByRole('heading', { name: /Add Client|Create New Client/i }) })
+            .first();
+        this.openAddClientButton = page.getByRole('button', { name: /Add Client|Create Client/i }).first();
+        this.modalHeading = this.modal.getByRole('heading', { name: /Add Client|Create New Client/i }).first();
         this.businessNameInput = page.locator('input[name="businessName"]');
         this.tradingNameInput = page.locator('input[name="tradingName"]');
         this.contactNameInput = page.locator('input[name="contactName"]');
@@ -37,19 +45,36 @@ export class CreateClientModal {
         this.phoneInput = page.locator('input[name="phone"]');
         this.emailInput = page.locator('input[name="email"]');
         this.mobileInput = page.locator('input[name="mobile"]');
-        this.accountManagerCombobox = page.getByRole('combobox', { name: 'Account Manager' });
+        this.accountManagerCombobox = this.modal
+            .locator('label', { hasText: /Account Manager/i })
+            .first()
+            .locator('xpath=following::button[@role="combobox"][1]');
         this.accountManagerEmailInput = page.locator('input[name="managerEmail"]');
-        this.addressSearchButton = page.getByRole('button', { name: /Search\.\.\./i });
-        this.assignBranchCombobox = page.getByRole('combobox', { name: 'Assign to Branch*' });
-        this.cancelButton = this.modalFooter.getByRole('button', { name: 'Cancel', exact: true });
-        this.saveButton = this.modalFooter.getByRole('button', { name: 'Save', exact: true });
+        this.addressSearchButton = this.modal.getByRole('button', { name: /Search\.\.\./i }).first();
+        this.addressSearchInput = this.page
+            .locator('input[placeholder*="search" i], input[aria-label*="search" i]')
+            .first();
+        this.successMessage = this.page
+            .locator('div[role="status"][aria-live="polite"]')
+            .filter({ hasText: /add client successfully!?/i })
+            .first();
+        this.assignBranchCombobox = this.modal
+            .locator('label', { hasText: /Assign to Branch/i })
+            .first()
+            .locator('xpath=following::button[@role="combobox"][1]');
+        this.cancelButton = this.modal.getByRole('button', { name: 'Cancel', exact: true }).first();
+        this.saveButton = this.modal.getByRole('button', { name: 'Save', exact: true }).first();
         this.closeButton = page.getByRole('button', { name: 'Close' });
     }
 
     async goto(): Promise<void> {
         const clientListPage = new ClientListPage(this.page);
         await clientListPage.goto();
-        await this.createClientButton.click();
+        await expect(this.openAddClientButton).toBeVisible({ timeout: 10000 });
+        await expect(this.openAddClientButton).toBeEnabled({ timeout: 10000 });
+        await this.openAddClientButton.scrollIntoViewIfNeeded();
+        await this.openAddClientButton.click({ trial: true });
+        await this.openAddClientButton.click();
         await this.expectLoaded();
     }
 
@@ -129,7 +154,22 @@ export class CreateClientModal {
     }
 
     async clickAccountManagerCombobox(): Promise<void> {
-        await this.accountManagerCombobox.click();
+        const candidates = [
+            this.accountManagerCombobox,
+            this.modal.getByRole('combobox').first(),
+        ];
+
+        for (const candidate of candidates) {
+            if (await candidate.isVisible().catch(() => false)) {
+                await candidate.scrollIntoViewIfNeeded();
+                await expect(candidate).toBeEnabled({ timeout: 10000 });
+                await candidate.click({ trial: true });
+                await candidate.click();
+                return;
+            }
+        }
+
+        throw new Error('Account Manager combobox is not visible in Add Client modal.');
     }
 
     async selectAccountManager(searchText: string = 'testy'): Promise<void> {
@@ -162,7 +202,21 @@ export class CreateClientModal {
     }
 
     async clickAddressSearchButton(): Promise<void> {
+        await expect(this.addressSearchButton).toBeVisible({ timeout: 10000 });
         await this.addressSearchButton.click();
+    }
+
+    async selectAddressFromSuggestion(searchText: string): Promise<void> {
+        await this.clickAddressSearchButton();
+        await expect(this.addressSearchInput).toBeVisible({ timeout: 10000 });
+        await this.addressSearchInput.fill(searchText);
+
+        const firstSuggestion = this.page
+            .locator('[role="listbox"] [role="option"], [cmdk-list] [role="option"], [data-radix-popper-content-wrapper] [role="option"]')
+            .first();
+
+        await expect(firstSuggestion).toBeVisible({ timeout: 10000 });
+        await firstSuggestion.click();
     }
 
     async clickAssignBranchCombobox(): Promise<void> {
@@ -197,7 +251,6 @@ export class CreateClientModal {
 
     private async clickModalActionButton(button: Locator): Promise<void> {
         await expect(this.modal).toBeVisible({ timeout: 10000 });
-        await expect(this.modalFooter).toBeVisible({ timeout: 10000 });
         await expect(button).toBeVisible({ timeout: 10000 });
         await expect(button).toBeEnabled({ timeout: 10000 });
         await button.scrollIntoViewIfNeeded();
@@ -205,7 +258,13 @@ export class CreateClientModal {
     }
 
     async expectClosed(): Promise<void> {
+        await expect(this.openModal).toHaveCount(0, { timeout: 15000 });
         await expect(this.modal).not.toBeVisible({ timeout: 15000 });
+    }
+
+    async expectAddClientSuccessMessage(): Promise<void> {
+        await expect(this.successMessage).toContainText(/add client successfully!?/i, { timeout: 15000 });
+        await expect(this.successMessage).toBeVisible({ timeout: 15000 });
     }
 
     async clickClose(): Promise<void> {

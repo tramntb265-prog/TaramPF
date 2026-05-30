@@ -1,6 +1,6 @@
 import { test as base, expect } from './auth.fixtures';
 import { ClientListPage } from '../pages/clientList.page';
-import { CreateClientModal } from '../pages/createClientModal';
+import { CreateClientModal } from '../pages/createClient.modal';
 
 type ClientListFixtures = {
 	clientListPage: ClientListPage;
@@ -20,12 +20,14 @@ type ClientListFixtures = {
 	clickAccountManagerStep: () => Promise<void>;
 	selectAccountManagerStep: (searchText?: string) => Promise<void>;
 	clickAddressSearchStep: () => Promise<void>;
+	selectAddressFromSuggestionStep: (searchText: string) => Promise<void>;
 	clickAssignBranchStep: () => Promise<void>;
 	selectAssignBranchStep: (preferredBranchName?: string) => Promise<void>;
 	clickCancelCreateClientStep: () => Promise<void>;
 	clickSaveCreateClientStep: () => Promise<void>;
 	clickCloseCreateClientStep: () => Promise<void>;
 	expectCreateClientModalClosedStep: () => Promise<void>;
+	expectAddClientSuccessMessageStep: () => Promise<void>;
 };
 
 export const test = base.extend<ClientListFixtures>({
@@ -127,6 +129,12 @@ export const test = base.extend<ClientListFixtures>({
 		});
 	},
 
+	selectAddressFromSuggestionStep: async ({ createClientModal }, use) => {
+		await use(async (searchText: string) => {
+			await createClientModal.selectAddressFromSuggestion(searchText);
+		});
+	},
+
 	clickAssignBranchStep: async ({ createClientModal }, use) => {
 		await use(async () => {
 			await createClientModal.clickAssignBranchCombobox();
@@ -160,6 +168,12 @@ export const test = base.extend<ClientListFixtures>({
 	expectCreateClientModalClosedStep: async ({ createClientModal }, use) => {
 		await use(async () => {
 			await createClientModal.expectClosed();
+		});
+	},
+
+	expectAddClientSuccessMessageStep: async ({ createClientModal }, use) => {
+		await use(async () => {
+			await createClientModal.expectAddClientSuccessMessage();
 		});
 	},
 });

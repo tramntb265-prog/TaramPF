@@ -12,9 +12,11 @@ test.describe('Create Client Modal Tests', () => {
 		typePhoneWithValidationStep,
 		fillMobileStep,
 		selectAccountManagerStep,
+		selectAddressFromSuggestionStep,
 		selectAssignBranchStep,
 		clickSaveCreateClientStep,
 		expectCreateClientModalClosedStep,
+		expectAddClientSuccessMessageStep,
 	}) => {
 		const suffix = Date.now();
 		const businessName = `Auto Client ${suffix}`;
@@ -28,10 +30,12 @@ test.describe('Create Client Modal Tests', () => {
 		await typeEmailWithValidationStep(`auto.client.${suffix}@yopmail.com`);
 		await fillMobileStep('0217654321');
 		await selectAccountManagerStep('Owner NZ');
+		await selectAddressFromSuggestionStep('Auckland');
 		await selectAssignBranchStep();
 
 		await clickSaveCreateClientStep();
 		await expectCreateClientModalClosedStep();
+		await expectAddClientSuccessMessageStep();
 
 		const searchInput = page.locator('table input[type="search"]');
 		await searchInput.fill(businessName);
