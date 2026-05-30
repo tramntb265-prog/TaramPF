@@ -1,4 +1,4 @@
-import { test as base, expect } from './auth.fixtures';
+import { test as base, expect } from '@playwright/test';
 import { ClientListPage } from '../pages/clientList.page';
 import { CreateClientModal } from '../pages/createClient.modal';
 
