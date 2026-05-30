@@ -11,8 +11,9 @@
     "@types/node": "^25.9.1"
   },
   "scripts": {
-    "test:clientlist": "playwright test -g @client_list --project=chromium-pf",
-    "test:clientlist-headless": "playwright test tests/client/clientList.spec.ts --project=chromium-standard --headed",
-    "test:clientlist-2": "playwright test tests/client/clientList.spec.ts --project=chromium-standard"
+    "test:clientlist": "playwright test -g @client_list --project=chromium-pf --workers=1",
+    "test:clientlist-headed": "playwright test -g @client_list --project=chromium-standard --headed --workers=1",
+    "test:clientlist-2": "playwright test -g @client_list --project=chromium-standard --workers=1",
+    "test:addClientModal": "playwright test -g @addClientModal --project=chromium-standard --workers=1"
   }
 }

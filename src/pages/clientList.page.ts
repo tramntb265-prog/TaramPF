@@ -8,12 +8,14 @@ export class ClientListPage {
     readonly clientRows: Locator;
 
     readonly clientTableSearchInput: Locator;
+    readonly createClientButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
         this.clientTable = page.locator('table');
         this.clientRows = this.clientTable.locator('tbody tr');
         this.clientTableSearchInput = this.clientTable.locator('input[type="search"]');
+        this.createClientButton = page.getByRole('button', { name: 'Add Client' });
     }
 
     async goto(): Promise<void> {

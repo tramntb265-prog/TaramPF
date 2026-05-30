@@ -1,8 +1,13 @@
+/// <reference types="node" />
+
 import { test as base, expect, Page } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
 import fs from 'fs';
+import path from 'path';
+import readline from 'readline';
 
-const authFile = 'PFauth.json';
+const authFile = path.resolve(__dirname, '../../auth.json');
+const legacyAuthFile = path.resolve(__dirname, '../../PFauth.json');
 const dashboardUrl = 'https://dev.flexigrow.app';
 
 type PFFixtures = {
@@ -10,7 +15,11 @@ type PFFixtures = {
 };
 
 export const test = base.extend<PFFixtures>({
-    page: async ({ browser }, use) => {
+    page: [async ({ browser }, use) => {
+        if (!fs.existsSync(authFile) && fs.existsSync(legacyAuthFile)) {
+            fs.copyFileSync(legacyAuthFile, authFile);
+        }
+
         // 1. Create a pristine context using the stored state
         const context = await browser.newContext({
             storageState: fs.existsSync(authFile) ? authFile : undefined
@@ -28,7 +37,7 @@ export const test = base.extend<PFFixtures>({
         // 5. Clean up after the test completes
         await page.close();
         await context.close();
-    }, 
+    }, { scope: 'test', timeout: 0 }],
 });
 
 export { expect };
@@ -58,6 +67,9 @@ async function handleSessionLifecycle(page: Page): Promise<void> {
         } catch (error) {
             console.log('❌ Session validation failed. Clearing state for retry...');
             await page.context().clearCookies();
+            if (fs.existsSync(authFile)) {
+                fs.unlinkSync(authFile);
+            }
         }
     }
 
@@ -74,8 +86,9 @@ async function handleSessionLifecycle(page: Page): Promise<void> {
     await loginPage.continueButton.click();
     await loginPage.expectMfaStep();
 
-    console.log('OTP required. Enter it in the browser, then click Resume in the Playwright Inspector.');
-    await page.pause();
+    console.log('MFA page is ready. Enter OTP in terminal and press Enter.');
+    const otpFromInput = await readOtpFromTerminal();
+    await loginPage.otpCodeInput.fill(otpFromInput);
 
     await loginPage.continueButton.click();
     await loginPage.expectLoggedIn();
@@ -83,4 +96,75 @@ async function handleSessionLifecycle(page: Page): Promise<void> {
     // Save state directly from the authenticated context
     await page.context().storageState({ path: authFile });
     console.log(`💾 Fresh session written to ${authFile}`);
+}
+
+async function readOtpFromTerminal(): Promise<string> {
+    const otpFromEnv = process.env.PF_OTP ?? process.env.OTP_CODE;
+    if (otpFromEnv && otpFromEnv.trim()) {
+        return otpFromEnv.trim();
+    }
+
+    if (process.stdin.isTTY && process.stdout.isTTY) {
+        return promptOtpWithReadline(process.stdin, process.stdout);
+    }
+
+    // Playwright workers can run with piped stdio. On Windows, read from the real console device.
+    if (process.platform === 'win32') {
+        const inputCandidates = ['\\\\.\\CONIN$', 'CONIN$'];
+        const outputCandidates = ['\\\\.\\CONOUT$', 'CONOUT$'];
+
+        try {
+            for (const inPath of inputCandidates) {
+                for (const outPath of outputCandidates) {
+                    try {
+                        const conIn = fs.createReadStream(inPath);
+                        const conOut = fs.createWriteStream(outPath);
+                        const otp = await promptOtpWithReadline(conIn, conOut);
+                        conIn.close();
+                        conOut.end();
+                        return otp;
+                    } catch {
+                        // Try next device path pair.
+                    }
+                }
+            }
+
+            throw new Error(
+                'Unable to read OTP from terminal in this Playwright process. Set PF_OTP (or OTP_CODE) before running the test.'
+            );
+        } catch {
+            throw new Error(
+                'Unable to read OTP from terminal in this Playwright process. Set PF_OTP (or OTP_CODE) before running the test.'
+            );
+        }
+    }
+
+    throw new Error(
+        'Terminal input is not interactive in this Playwright process. Set PF_OTP (or OTP_CODE) before running the test.'
+    );
+}
+
+async function promptOtpWithReadline(input: NodeJS.ReadableStream, output: NodeJS.WritableStream): Promise<string> {
+    input.setEncoding?.('utf8');
+    (input as NodeJS.ReadStream).resume?.();
+
+    const rl = readline.createInterface({
+        input,
+        output,
+        terminal: true,
+    });
+
+    const otp = await new Promise<string>((resolve) => {
+        rl.question('Enter OTP code and press Enter: ', (answer: string) => {
+            resolve(answer.trim());
+        });
+    });
+
+    rl.close();
+
+    if (!otp) {
+        throw new Error('OTP cannot be empty. Re-run and provide OTP in terminal or set PF_OTP.');
+    }
+
+    return otp;
 }
