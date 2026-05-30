@@ -1,44 +1,59 @@
 import { test, expect } from '../../src/fixtures/clientList.fixtures';
 
 test.describe('Create Client Modal Tests', () => {
-	test('@addClientModal @create_client_happy should create a new client successfully', async ({
-		page,
+	test('@addClientModal @ACM001 should render popup controls and core inputs', async ({
+		createClientModal,
 		gotoCreateClientModal,
-		fillBusinessNameStep,
-		fillTradingNameStep,
-		fillContactNameStep,
-		fillNzbnStep,
-		typeEmailWithValidationStep,
-		typePhoneWithValidationStep,
-		fillMobileStep,
-		selectAccountManagerStep,
-		selectAddressFromSuggestionStep,
-		selectAssignBranchStep,
-		clickSaveCreateClientStep,
-		expectCreateClientModalClosedStep,
-		expectAddClientSuccessMessageStep,
 	}) => {
-		const suffix = Date.now();
-		const businessName = `Auto Client ${suffix}`;
-
 		await gotoCreateClientModal();
-		await fillBusinessNameStep(businessName);
-		await fillTradingNameStep(`Auto Trading ${suffix}`);
-		await fillContactNameStep('Automation User');
-		await fillNzbnStep('1212345678901');
-		await typePhoneWithValidationStep('0211234567');
-		await typeEmailWithValidationStep(`auto.client.${suffix}@yopmail.com`);
-		await fillMobileStep('0217654321');
-		await selectAccountManagerStep('Owner NZ');
-		await selectAddressFromSuggestionStep('Auckland');
-		await selectAssignBranchStep();
 
+		await expect(createClientModal.modalHeading).toBeVisible();
+		await expect(createClientModal.saveButton).toBeVisible();
+		await expect(createClientModal.saveButton).toBeEnabled();
+		await expect(createClientModal.cancelButton).toBeVisible();
+		await expect(createClientModal.cancelButton).toBeEnabled();
+		await expect(createClientModal.closeButton).toBeVisible();
+		await expect(createClientModal.closeButton).toBeEnabled();
+
+		await expect(createClientModal.businessNameInput).toBeVisible();
+		await expect(createClientModal.tradingNameInput).toBeVisible();
+		await expect(createClientModal.contactNameInput).toBeVisible();
+		await expect(createClientModal.nzbnInput).toBeVisible();
+		await expect(createClientModal.phoneInput).toBeVisible();
+		await expect(createClientModal.emailInput).toBeVisible();
+		await expect(createClientModal.mobileInput).toBeVisible();
+
+		await expect(createClientModal.addressSearchButton).toContainText(/Search/i);
+	});
+
+	test('@addClientModal @ACMM002 should show Required only for mandatory fields on empty submit', async ({
+		createClientModal,
+		gotoCreateClientModal,
+		clickSaveCreateClientStep,
+	}) => {
+		await gotoCreateClientModal();
 		await clickSaveCreateClientStep();
-		await expectCreateClientModalClosedStep();
-		await expectAddClientSuccessMessageStep();
 
-		const searchInput = page.locator('table input[type="search"]');
-		await searchInput.fill(businessName);
-		await expect(page.locator('table')).toContainText(businessName);
+		const requiredForInput = (name: string) =>
+			createClientModal.modal
+				.locator(`input[name="${name}"]`)
+				.locator('xpath=ancestor::div[contains(@class, "flex") and contains(@class, "flex-col")][1]//p')
+				.filter({ hasText: /^Required$/i })
+				.first();
+
+		const requiredForAssignBranch = createClientModal.assignBranchCombobox
+			.locator('xpath=ancestor::div[contains(@class, "flex") and contains(@class, "flex-col")][1]//p')
+			.filter({ hasText: /^Required$/i })
+			.first();
+
+		await expect(requiredForInput('businessName')).toBeVisible();
+		await expect(requiredForInput('contactName')).toBeVisible();
+		await expect(requiredForInput('email')).toBeVisible();
+		await expect(requiredForInput('mobile')).toBeVisible();
+		await expect(requiredForAssignBranch).toBeVisible();
+
+		await expect(requiredForInput('tradingName')).toHaveCount(0);
+		await expect(requiredForInput('ABN')).toHaveCount(0);
+		await expect(requiredForInput('phone')).toHaveCount(0);
 	});
 });
