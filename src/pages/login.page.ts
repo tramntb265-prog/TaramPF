@@ -18,13 +18,17 @@ export class LoginPage {
     constructor(page: Page) {
         this.page = page;
         this.loginHeading = page.getByRole('heading', { name: 'Welcome to Flexigrow' });
-        this.emailInput = page.locator('#sign_up_sign_in_credentials_p_email');
-        this.passwordInput = page.locator('#verify_password_p_password');
-        this.signInButton = page.getByRole('button', { name: 'Sign In' });
+        this.emailInput = page
+            .locator('#sign_up_sign_in_credentials_p_email, input[type="email"], input[name*="email" i], input[autocomplete="email"]')
+            .first();
+        this.passwordInput = page
+            .locator('#verify_password_p_password, input[type="password"], input[name*="password" i], input[autocomplete="current-password"]')
+            .first();
+        this.signInButton = page.getByRole('button', { name: /Sign In|Continue/i }).first();
         this.continueButton = page.getByRole('button', { name: 'Continue', exact: true });
         this.passwordHeading = page.getByRole("heading", { name: "Enter your password" });
         this.OtpPageHeading = page.getByRole("heading", { name: "Verify MFA code" });
-        this.otpCodeInput = page.locator('#otp_code_p_confirmation_code');
+        this.otpCodeInput = page.locator('#mfa_authenticator_app_p_verification_code')
 
     }
 
@@ -34,7 +38,11 @@ export class LoginPage {
     }
 
     async expectLoaded(): Promise<void> {
-        await expect(this.emailInput).toBeVisible({ timeout: 100000 });    
+        await expect
+            .poll(async () => {
+                return await this.emailInput.isVisible().catch(() => false);
+            }, { timeout: 100000, message: 'Expected email input to be visible on login screen.' })
+            .toBeTruthy();
     }
 
     async expectPasswordStep(): Promise<void> {

@@ -227,18 +227,40 @@ export class CreateClientModal {
         await this.clickAssignBranchCombobox();
 
         if (preferredBranchName && preferredBranchName.trim()) {
-            const preferredOption = this.page
-                .getByRole('option', { name: new RegExp(escapeForRegex(preferredBranchName), 'i') })
-                .first();
-            if (await preferredOption.isVisible().catch(() => false)) {
-                await preferredOption.click();
+            const preferredName = preferredBranchName.trim();
+            const preferredOption = this.page.getByRole('option', {
+                name: new RegExp(`^\\s*${escapeForRegex(preferredName)}\\s*$`, 'i')
+            }).first();
+
+            if (await this.clickOptionWithRetry(preferredOption)) {
                 return;
             }
         }
 
-        const firstOption = this.page.locator('[role="listbox"] [role="option"]').first();
-        await expect(firstOption).toBeVisible({ timeout: 5000 });
-        await firstOption.click();
+        const firstOption = this.page.getByRole('option').first();
+        if (await this.clickOptionWithRetry(firstOption)) {
+            return;
+        }
+
+        // Fallback for virtualized menus that frequently detach option nodes.
+        await this.page.keyboard.press('ArrowDown');
+        await this.page.keyboard.press('Enter');
+    }
+
+    private async clickOptionWithRetry(option: Locator, maxAttempts: number = 3): Promise<boolean> {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                await expect(option).toBeVisible({ timeout: 3000 });
+                await option.click({ timeout: 3000 });
+                return true;
+            } catch {
+                if (attempt === maxAttempts) {
+                    return false;
+                }
+            }
+        }
+
+        return false;
     }
 
     async clickCancel(): Promise<void> {
@@ -265,6 +287,13 @@ export class CreateClientModal {
     async expectAddClientSuccessMessage(): Promise<void> {
         await expect(this.successMessage).toContainText(/add client successfully!?/i, { timeout: 15000 });
         await expect(this.successMessage).toBeVisible({ timeout: 15000 });
+    }
+
+    async expectAddClientSuccessAndModalClosed(): Promise<void> {
+        await Promise.all([
+            this.expectAddClientSuccessMessage(),
+            this.expectClosed(),
+        ]);
     }
 
     async clickClose(): Promise<void> {

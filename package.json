@@ -14,6 +14,9 @@
     "test:clientlist": "playwright test -g @client_list --project=chromium-pf --workers=1",
     "test:clientlist-headed": "playwright test -g @client_list --project=chromium-standard --headed --workers=1",
     "test:clientlist-2": "playwright test -g @client_list --project=chromium-standard --workers=1",
-    "test:addClientModal": "playwright test -g @addClientModal --project=chromium-standard --workers=1"
+    "test:addClientModal": "playwright test -g @addClientModal --project=chromium-standard --workers=1",
+    "test:quote:create": "playwright test tests/quote/createQuote.spec.ts --project=chromium-standard --workers=1",
+    "test:quote:create:otp": "set PF_OTP=%npm_config_otp%&& playwright test tests/quote/createQuote.spec.ts --project=chromium-standard --workers=1",
+    "test:clientlist:otp": "set PF_OTP=%npm_config_otp%&& playwright test tests/client/clientList.spec.ts --project=chromium-standard --workers=1"
   }
 }
